@@ -24,6 +24,8 @@ from tiny_transformer.data.packed_dataset import PackedDatasetMeta
 from tiny_transformer.data.packed_dataset import PackedMemmapDataset
 from tiny_transformer.models.qwen3 import Qwen3Config
 from tiny_transformer.models.qwen3 import Qwen3ForCausalLM
+from tiny_transformer.models.qwen3_next import Qwen3NextConfig
+from tiny_transformer.models.qwen3_next import Qwen3NextForCausalLM
 
 
 def load_tokenizer(name_or_path: str):
@@ -35,7 +37,12 @@ def load_tokenizer(name_or_path: str):
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser()
-    p.add_argument("--config", type=str, required=True, help="Path to configs/qwen3_demo.json")
+    p.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to model config JSON (e.g. configs/qwen3_demo.json or configs/qwen3_next_demo.json)",
+    )
     p.add_argument("--data_dir", type=str, required=True, help="Directory containing train.bin/val.bin/meta.json")
     p.add_argument("--out_dir", type=str, default="runs", help="Output directory")
     p.add_argument("--steps", type=int, default=2000)
@@ -185,6 +192,20 @@ class EvalLossEarlyStoppingCallback(TrainerCallback):
         return control
 
 
+def build_model_from_config_dict(cfg_dict: dict):
+    model_type = str(cfg_dict.get("model_type") or "").strip()
+    if model_type == "qwen3":
+        config = Qwen3Config(**cfg_dict)
+        model = Qwen3ForCausalLM(config)
+        return config, model
+    if model_type == "qwen3_next":
+        config = Qwen3NextConfig(**cfg_dict)
+        model = Qwen3NextForCausalLM(config)
+        return config, model
+    raise ValueError(f"Unsupported model_type={model_type!r}. Expected 'qwen3' or 'qwen3_next'. "
+                     "Pick the corresponding config file under configs/.")
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     set_seed(args.seed)
@@ -208,9 +229,9 @@ def main(argv: list[str] | None = None) -> None:
     eval_ds = PackedMemmapDataset(data_dir / "val.bin", meta) if (data_dir / "val.bin").exists() else None
 
     cfg_dict = json.loads(Path(args.config).read_text())
-    config = Qwen3Config(**cfg_dict)
+    config, model = build_model_from_config_dict(cfg_dict)
 
-    tokenizer = load_tokenizer("Qwen/Qwen3-0.6B")
+    tokenizer = load_tokenizer(meta.tokenizer_name)
     if tokenizer.pad_token_id is None:
         raise ValueError("Tokenizer missing pad_token_id")
     if tokenizer.bos_token_id is None:
@@ -229,7 +250,10 @@ def main(argv: list[str] | None = None) -> None:
         print(f"[warn] tokenizer size ({tokenizer_total_size}) != config vocab_size ({config.vocab_size}); "
               "this is OK as long as tokenizer ids are < config.vocab_size.")
 
-    model = Qwen3ForCausalLM(config)
+    model_type = getattr(config, "model_type", None)
+    param_count = sum(p.numel() for p in model.parameters())
+    print(f"[model] type={model_type} params={param_count}")
+
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.bos_token_id = tokenizer.bos_token_id
     model.config.eos_token_id = tokenizer.eos_token_id
@@ -320,6 +344,10 @@ def main(argv: list[str] | None = None) -> None:
             "python": platform.python_version(),
             "torch": torch.__version__,
             "transformers": transformers.__version__,
+        },
+        "model": {
+            "model_type": getattr(config, "model_type", None),
+            "param_count": int(param_count),
         },
         "device": {
             "cuda_available": torch.cuda.is_available(),

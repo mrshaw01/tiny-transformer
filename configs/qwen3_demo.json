@@ -18,7 +18,7 @@
   "attention_dropout": 0.0,
   "rms_norm_eps": 1e-06,
 
-  "max_position_embeddings": 40960,
+  "max_position_embeddings": 4096,
   "rope_theta": 1000000,
   "rope_scaling": null,
 

@@ -1,4 +1,5 @@
-# NOTE: Vendored from `transformers` (Qwen3) and adjusted to live under `tiny_transformer/models/qwen3/`.
+# NOTE: Vendored from `transformers` (Qwen3) and adjusted to live under
+# `tiny_transformer/models/qwen3/`.
 # This file is intentionally editable so we can maintain/modify model internals in this repo.
 # coding=utf-8
 # Copyright 2025 The Qwen team, Alibaba Group and the HuggingFace Inc. team. All rights reserved.
@@ -22,7 +23,7 @@ from torch import nn
 from transformers.activations import ACT2FN
 from transformers.cache_utils import Cache
 from transformers.cache_utils import DynamicCache
-from transformers.generation import GenerationMixin
+from transformers.generation.utils import GenerationMixin
 from transformers.integrations import use_kernel_forward_from_hub
 from transformers.masking_utils import create_causal_mask
 from transformers.masking_utils import create_sliding_window_causal_mask

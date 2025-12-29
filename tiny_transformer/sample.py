@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
+from pathlib import Path
 
 import torch
 from transformers import AutoTokenizer
 
 from tiny_transformer.models.qwen3 import Qwen3ForCausalLM
+from tiny_transformer.models.qwen3_next import Qwen3NextForCausalLM
 
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
@@ -30,6 +33,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def load_model(ckpt_dir: str):
+    cfg_path = Path(ckpt_dir) / "config.json"
+    if not cfg_path.exists():
+        raise FileNotFoundError(f"Missing {cfg_path}; checkpoint must be saved via save_pretrained().")
+    model_type = str(json.loads(cfg_path.read_text()).get("model_type") or "").strip()
+    if model_type == "qwen3":
+        return Qwen3ForCausalLM.from_pretrained(ckpt_dir)
+    if model_type == "qwen3_next":
+        return Qwen3NextForCausalLM.from_pretrained(ckpt_dir)
+    raise ValueError(f"Unsupported model_type={model_type!r} in {cfg_path}")
+
+
 @torch.inference_mode()
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
@@ -47,7 +62,7 @@ def main(argv: list[str] | None = None) -> None:
     else:
         print("[device] cpu")
 
-    model = Qwen3ForCausalLM.from_pretrained(args.ckpt_dir)
+    model = load_model(args.ckpt_dir)
     if device.type == "cuda":
         model = model.to(device=device, dtype=torch.bfloat16)
     else:

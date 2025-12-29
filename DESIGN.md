@@ -1,13 +1,16 @@
 # tiny-transformer — design notes
 
-This repo is intentionally small and pragmatic: it demonstrates an end-to-end **scratch** training run for a **Qwen3-style** decoder-only model that finishes in **<10 minutes** on **1×A100**, and can generate non-trivial text samples.
+This repo is intentionally small and pragmatic: it demonstrates an end-to-end **scratch** training run for a decoder-only
+model that finishes in **<10 minutes** on **1×A100**, and can generate non-trivial text samples.
 
 ## What we train
 
-- The training script builds and trains `Qwen3ForCausalLM` (next-token prediction).
-  - Backbone: `Qwen3Model`
-  - HF base utilities: `Qwen3PreTrainedModel`
-- Code lives in `tiny_transformer/models/qwen3/` and is vendored from `transformers` so you can edit internals.
+We maintain **both** implementations to compare them under the same training loop + dataset:
+
+- Qwen3: `Qwen3ForCausalLM` (`tiny_transformer/models/qwen3/`)
+- Qwen3-Next: `Qwen3NextForCausalLM` (`tiny_transformer/models/qwen3_next/`)
+
+`tiny_transformer/train.py` selects the model by reading `model_type` from the JSON config you pass to `--config`.
 
 ## Constraints / reality check
 
@@ -16,19 +19,28 @@ This repo is intentionally small and pragmatic: it demonstrates an end-to-end **
 
 ## Model configuration
 
-The model is defined by a single JSON config: `configs/qwen3_demo.json`.
+The model is defined by a JSON config file under `configs/`:
 
-Key properties (as implemented):
+- `configs/qwen3_demo.json` (`model_type: qwen3`)
+- `configs/qwen3_next_demo.json` (`model_type: qwen3_next`)
 
-- Decoder-only Transformer with RoPE + RMSNorm + SwiGLU + GQA (Qwen-family style).
+Key properties (shared):
+
+- Decoder-only Transformer with RoPE + RMSNorm + SwiGLU.
+- Qwen tokenizer vocab (`~151k`) to match Qwen reserved ids.
+- The demo configs intentionally share the same core size knobs (`hidden_size`, `num_hidden_layers`, `num_attention_heads`, `num_key_value_heads`, `intermediate_size`) so runs are comparable.
+
+Key properties (Qwen3-Next specific):
+
+- Token mixer can be `full_attention` or `linear_attention` per layer (controlled by `layer_types`).
 - Context length: `512`
 - Tokenizer vocab: Qwen tokenizer (`vocab_size` in config is kept compatible with Qwen reserved ids).
 
-To change model size/shape, edit `configs/qwen3_demo.json` only.
+To change model size/shape, edit the config you are using.
 
 ## Tokenizer
 
-We follow Qwen3: use the official tokenizer via HuggingFace:
+We follow Qwen: use the official tokenizer via HuggingFace:
 
 - `AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")`
 
@@ -77,10 +89,11 @@ Logging / checkpoints / stopping:
 
 - Samples printed every `--sample_steps` (default 200) via a callback.
 - If validation is enabled (`--eval_steps`):
-  - Best checkpoint by `eval_loss` is saved to `runs/best` on each eval improvement.
+  - Best checkpoint by `eval_loss` is saved to `<out_dir>/best` on each eval improvement.
   - Optional early stopping: `--early_stopping_patience` (+ optional `--early_stopping_threshold`).
 - Optional wall-time cap: `--max_train_minutes` stops training after N minutes.
-- Final checkpoint is always saved to `runs/last` along with `runs/last/run_info.json`.
+- Final checkpoint is always saved to `<out_dir>/last` along with `<out_dir>/last/run_info.json`.
+  - In practice, use different `--out_dir` per model when comparing (e.g. `runs_qwen3` vs `runs_qwen3_next`).
 
 ## Repository structure (current)
 
@@ -94,9 +107,9 @@ tiny-transformer/
   .clang-format
   configs/
     qwen3_demo.json
+    qwen3_next_demo.json
   tiny_transformer/
     __init__.py
-    cli.py
     prepare_dataset.py
     train.py
     sample.py
@@ -106,6 +119,9 @@ tiny-transformer/
       qwen3/
         configuration_qwen3.py
         modeling_qwen3.py
+      qwen3_next/
+        configuration_qwen3_next.py
+        modeling_qwen3_next.py
 ```
 
 ## Minimal commands
@@ -113,6 +129,8 @@ tiny-transformer/
 - Prepare data:
   - `python -m tiny_transformer.prepare_dataset --out_dir data --seq_len 512 --max_bytes 100000000`
 - Train:
-  - `python -m tiny_transformer.train --config configs/qwen3_demo.json --data_dir data --out_dir runs --steps 2000 --bf16`
+  - Qwen3: `python -m tiny_transformer.train --config configs/qwen3_demo.json --data_dir data --out_dir runs_qwen3 --steps 2000 --bf16`
+  - Qwen3-Next: `python -m tiny_transformer.train --config configs/qwen3_next_demo.json --data_dir data --out_dir runs_qwen3_next --steps 2000 --bf16`
 - Sample:
-  - `python -m tiny_transformer.sample --ckpt_dir runs/best --prompt "Once upon a time" --max_new_tokens 200`
+  - Qwen3: `python -m tiny_transformer.sample --ckpt_dir runs_qwen3/best --prompt "Once upon a time" --max_new_tokens 200`
+  - Qwen3-Next: `python -m tiny_transformer.sample --ckpt_dir runs_qwen3_next/best --prompt "Once upon a time" --max_new_tokens 200`

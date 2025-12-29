@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright 2024 The Qwen team, Alibaba Group and the HuggingFace Inc. team. All rights reserved.
+# Copyright 2025 The Qwen team, Alibaba Group and the HuggingFace Inc. team. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Qwen3 model configuration (vendored)."""
+"""Qwen3-Next model configuration (vendored)."""
 
 from transformers.configuration_utils import layer_type_validation
 from transformers.configuration_utils import PretrainedConfig
@@ -22,12 +22,12 @@ from transformers.utils import logging
 logger = logging.get_logger(__name__)
 
 
-class Qwen3Config(PretrainedConfig):
+class Qwen3NextConfig(PretrainedConfig):
     r"""
-    This is the configuration class to store the configuration of a [`Qwen3Model`]. It is used to instantiate a
-    Qwen3 model according to the specified arguments, defining the model architecture. Instantiating a configuration
-    with the defaults will yield a similar configuration to that of
-    Qwen3-8B [Qwen/Qwen3-8B](https://huggingface.co/Qwen/Qwen3-8B).
+    This is the configuration class to store the configuration of a [`Qwen3NextModel`]. It is used to instantiate a
+    Qwen3-Next model according to the specified arguments, defining the model architecture.
+    Instantiating a configuration with the defaults will yield a similar configuration to that of
+    Qwen3-Next-80B-A3B-Instruct [Qwen/Qwen3-Next-80B-A3B-Instruct](https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct).
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
@@ -35,27 +35,25 @@ class Qwen3Config(PretrainedConfig):
 
     Args:
         vocab_size (`int`, *optional*, defaults to 151936):
-            Vocabulary size of the Qwen3 model. Defines the number of different tokens that can be represented by the
-            `inputs_ids` passed when calling [`Qwen3Model`]
-        hidden_size (`int`, *optional*, defaults to 4096):
+            Vocabulary size of the model. Defines the number of different tokens that can be represented by the
+            `inputs_ids`.
+        hidden_size (`int`, *optional*, defaults to 2048):
             Dimension of the hidden representations.
-        intermediate_size (`int`, *optional*, defaults to 22016):
+        intermediate_size (`int`, *optional*, defaults to 5632):
             Dimension of the MLP representations.
-        num_hidden_layers (`int`, *optional*, defaults to 32):
+        num_hidden_layers (`int`, *optional*, defaults to 48):
             Number of hidden layers in the Transformer encoder.
-        num_attention_heads (`int`, *optional*, defaults to 32):
+        num_attention_heads (`int`, *optional*, defaults to 16):
             Number of attention heads for each attention layer in the Transformer encoder.
-        num_key_value_heads (`int`, *optional*, defaults to 32):
+        num_key_value_heads (`int`, *optional*, defaults to 2):
             This is the number of key_value heads that should be used to implement Grouped Query Attention. If
             `num_key_value_heads=num_attention_heads`, the model will use Multi Head Attention (MHA), if
             `num_key_value_heads=1` the model will use Multi Query Attention (MQA) otherwise GQA is used. When
             converting a multi-head checkpoint to a GQA checkpoint, each group key and value head should be constructed
-            by meanpooling all the original heads within that group. For more details, check out [this
-            paper](https://huggingface.co/papers/2305.13245). If it is not specified, will default to `32`.
-        head_dim (`int`, *optional*, defaults to 128):
-            The attention head dimension.
-        hidden_act (`str` or `function`, *optional*, defaults to `"silu"`):
-            The non-linear activation function (function or string) in the decoder.
+            by meanpooling all the original heads within that group. For more details checkout [this
+            paper](https://arxiv.org/pdf/2305.13245.pdf). If it is not specified, will default to `32`.
+        hidden_act (`str`, *optional*, defaults to `"silu"`):
+            The non-linear activation function in the decoder.
         max_position_embeddings (`int`, *optional*, defaults to 32768):
             The maximum sequence length that this model might ever be used with.
         initializer_range (`float`, *optional*, defaults to 0.02):
@@ -94,11 +92,11 @@ class Qwen3Config(PretrainedConfig):
                 `beta_slow` (`float`, *optional*):
                     Only used with 'yarn'. Parameter to set the boundary for interpolation (only) in the linear
                     ramp function. If unspecified, it defaults to 1.
-                `short_factor` (`list[float]`, *optional*):
+                `short_factor` (`List[float]`, *optional*):
                     Only used with 'longrope'. The scaling factor to be applied to short contexts (<
                     `original_max_position_embeddings`). Must be a list of numbers with the same length as the hidden
                     size divided by the number of attention heads divided by 2
-                `long_factor` (`list[float]`, *optional*):
+                `long_factor` (`List[float]`, *optional*):
                     Only used with 'longrope'. The scaling factor to be applied to long contexts (<
                     `original_max_position_embeddings`). Must be a list of numbers with the same length as the hidden
                     size divided by the number of attention heads divided by 2
@@ -106,42 +104,76 @@ class Qwen3Config(PretrainedConfig):
                     Only used with 'llama3'. Scaling factor applied to low frequency components of the RoPE
                 `high_freq_factor` (`float`, *optional*):
                     Only used with 'llama3'. Scaling factor applied to high frequency components of the RoPE
-        attention_bias (`bool`, defaults to `False`, *optional*, defaults to `False`):
+        partial_rotary_factor (`float`, *optional*, defaults to 0.25):
+            Percentage of the query and keys which will have rotary embedding.
+        attention_bias (`bool`, *optional*, defaults to `False`):
             Whether to use a bias in the query, key, value and output projection layers during self-attention.
-        use_sliding_window (`bool`, *optional*, defaults to `False`):
-            Whether to use sliding window attention.
-        sliding_window (`int`, *optional*, defaults to 4096):
-            Sliding window attention (SWA) window size. If not specified, will default to `4096`.
-        max_window_layers (`int`, *optional*, defaults to 28):
-            The number of layers using full attention. The first `max_window_layers` layers will use full attention, while any
-            additional layer afterwards will use SWA (Sliding Window Attention).
-        layer_types (`list`, *optional*):
-            Attention pattern for each layer.
         attention_dropout (`float`, *optional*, defaults to 0.0):
             The dropout ratio for the attention probabilities.
+        head_dim (`int`, *optional*, defaults to 256):
+            Projection weights dimension in multi-head attention.
+        linear_conv_kernel_dim (`int`, *optional*, defaults to 4):
+            Kernel size of the convolution used in linear attention layers.
+        linear_key_head_dim (`int`, *optional*, defaults to 128):
+            Dimension of each key head in linear attention.
+        linear_value_head_dim (`int`, *optional*, defaults to 128):
+            Dimension of each value head in linear attention.
+        linear_num_key_heads (`int`, *optional*, defaults to 16):
+            Number of key heads used in linear attention layers.
+        linear_num_value_heads (`int`, *optional*, defaults to 32):
+            Number of value heads used in linear attention layers.
+        decoder_sparse_step (`int`, *optional*, defaults to 1):
+            The frequency of the MoE layer.
+        moe_intermediate_size (`int`, *optional*, defaults to 512):
+            Intermediate size of the routed expert.
+        shared_expert_intermediate_size (`int`, *optional*, defaults to 512):
+            Intermediate size of the shared expert.
+        num_experts_per_tok (`int`, *optional*, defaults to 10):
+            Number of selected experts.
+        num_experts (`int`, *optional*, defaults to 512):
+            Number of routed experts.
+        norm_topk_prob (`bool`, *optional*, defaults to `True`):
+            Whether to normalize the topk probabilities.
+        output_router_logits (`bool`, *optional*, defaults to `False`):
+            Whether or not the router logits should be returned by the model. Enabling this will also
+            allow the model to output the auxiliary loss, including load balancing loss and router z-loss.
+        router_aux_loss_coef (`float`, *optional*, defaults to 0.001):
+            The aux loss factor for the total loss.
+        mlp_only_layers (`list[int]`, *optional*, defaults to `[]`):
+            Indicate which layers use Qwen3NextMLP rather than Qwen3NextSparseMoeBlock
+            The list contains layer index, from 0 to num_layers-1 if we have num_layers layers
+            If `mlp_only_layers` is empty, `decoder_sparse_step` is used to determine the sparsity.
+        layer_types (`list[str]`, *optional*):
+            Types of each layer (attention or linear).
 
     ```python
-    >>> from transformers import Qwen3Model, Qwen3Config
+    >>> from transformers import Qwen3NextModel, Qwen3NextConfig
 
-    >>> # Initializing a Qwen3 style configuration
-    >>> configuration = Qwen3Config()
+    >>> # Initializing a Qwen3Next style configuration
+    >>> configuration =  Qwen3NextConfig()
 
-    >>> # Initializing a model from the Qwen3-8B style configuration
-    >>> model = Qwen3Model(configuration)
+    >>> # Initializing a model from the Qwen3-Next-80B-A3B style configuration
+    >>> model = Qwen3NextModel(configuration)
 
     >>> # Accessing the model configuration
     >>> configuration = model.config
-    ```"""
+    ```
+    """
 
-    model_type = "qwen3"
+    model_type = "qwen3_next"
     keys_to_ignore_at_inference = ["past_key_values"]
 
-    # Default tensor parallel plan for base model `Qwen3`
     base_model_tp_plan = {
         "layers.*.self_attn.q_proj": "colwise",
         "layers.*.self_attn.k_proj": "colwise",
         "layers.*.self_attn.v_proj": "colwise",
         "layers.*.self_attn.o_proj": "rowwise",
+        "layers.*.mlp.experts.*.gate_proj": "colwise",
+        "layers.*.mlp.experts.*.up_proj": "colwise",
+        "layers.*.mlp.experts.*.down_proj": "rowwise",
+        "layers.*.mlp.shared_experts.gate_proj": "colwise",
+        "layers.*.mlp.shared_experts.up_proj": "colwise",
+        "layers.*.mlp.shared_experts.down_proj": "rowwise",
         "layers.*.mlp.gate_proj": "colwise",
         "layers.*.mlp.up_proj": "colwise",
         "layers.*.mlp.down_proj": "rowwise",
@@ -155,12 +187,11 @@ class Qwen3Config(PretrainedConfig):
     def __init__(
         self,
         vocab_size=151936,
-        hidden_size=4096,
-        intermediate_size=22016,
-        num_hidden_layers=32,
-        num_attention_heads=32,
-        num_key_value_heads=32,
-        head_dim=128,
+        hidden_size=2048,
+        intermediate_size=5632,
+        num_hidden_layers=48,
+        num_attention_heads=16,
+        num_key_value_heads=2,
         hidden_act="silu",
         max_position_embeddings=32768,
         initializer_range=0.02,
@@ -169,57 +200,73 @@ class Qwen3Config(PretrainedConfig):
         tie_word_embeddings=False,
         rope_theta=10000.0,
         rope_scaling=None,
+        partial_rotary_factor=0.25,
         attention_bias=False,
-        use_sliding_window=False,
-        sliding_window=4096,
-        max_window_layers=28,
-        layer_types=None,
         attention_dropout=0.0,
+        head_dim=256,
+        linear_conv_kernel_dim=4,
+        linear_key_head_dim=128,
+        linear_value_head_dim=128,
+        linear_num_key_heads=16,
+        linear_num_value_heads=32,
+        decoder_sparse_step=1,
+        moe_intermediate_size=512,
+        shared_expert_intermediate_size=512,
+        num_experts_per_tok=10,
+        num_experts=512,
+        norm_topk_prob=True,
+        output_router_logits=False,
+        router_aux_loss_coef=0.001,
+        mlp_only_layers=[],
+        layer_types=None,
         **kwargs,
     ):
+        super().__init__(tie_word_embeddings=tie_word_embeddings, **kwargs)
         self.vocab_size = vocab_size
         self.max_position_embeddings = max_position_embeddings
         self.hidden_size = hidden_size
         self.intermediate_size = intermediate_size
         self.num_hidden_layers = num_hidden_layers
         self.num_attention_heads = num_attention_heads
-        self.use_sliding_window = use_sliding_window
-        self.sliding_window = sliding_window if self.use_sliding_window else None
-        self.max_window_layers = max_window_layers
-
-        # for backward compatibility
-        if num_key_value_heads is None:
-            num_key_value_heads = num_attention_heads
-
         self.num_key_value_heads = num_key_value_heads
-        self.head_dim = head_dim
         self.hidden_act = hidden_act
         self.initializer_range = initializer_range
         self.rms_norm_eps = rms_norm_eps
         self.use_cache = use_cache
         self.rope_theta = rope_theta
         self.rope_scaling = rope_scaling
+        self.partial_rotary_factor = partial_rotary_factor
         self.attention_bias = attention_bias
         self.attention_dropout = attention_dropout
-        # Validate the correctness of rotary position embeddings parameters
-        # BC: if there is a 'type' field, move it to 'rope_type'.
-        if self.rope_scaling is not None and "type" in self.rope_scaling:
-            self.rope_scaling["rope_type"] = self.rope_scaling["type"]
+        self.head_dim = head_dim
         rope_config_validation(self)
 
         self.layer_types = layer_types
         if self.layer_types is None:
+            interval_pattern = kwargs.get("full_attention_interval", 4)
             self.layer_types = [
-                "sliding_attention"
-                if self.sliding_window is not None and i >= self.max_window_layers else "full_attention"
+                "linear_attention" if bool((i + 1) % interval_pattern) else "full_attention"
                 for i in range(self.num_hidden_layers)
             ]
         layer_type_validation(self.layer_types, self.num_hidden_layers)
 
-        super().__init__(
-            tie_word_embeddings=tie_word_embeddings,
-            **kwargs,
-        )
+        # linear attention part
+        self.linear_conv_kernel_dim = linear_conv_kernel_dim
+        self.linear_key_head_dim = linear_key_head_dim
+        self.linear_value_head_dim = linear_value_head_dim
+        self.linear_num_key_heads = linear_num_key_heads
+        self.linear_num_value_heads = linear_num_value_heads
+
+        # MoE arguments
+        self.decoder_sparse_step = decoder_sparse_step
+        self.moe_intermediate_size = moe_intermediate_size
+        self.shared_expert_intermediate_size = shared_expert_intermediate_size
+        self.num_experts_per_tok = num_experts_per_tok
+        self.num_experts = num_experts
+        self.norm_topk_prob = norm_topk_prob
+        self.output_router_logits = output_router_logits
+        self.router_aux_loss_coef = router_aux_loss_coef
+        self.mlp_only_layers = mlp_only_layers
 
 
-__all__ = ["Qwen3Config"]
+__all__ = ["Qwen3NextConfig"]
