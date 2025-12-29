@@ -21,16 +21,8 @@ from transformers import TrainingArguments
 from src.data import default_data_collator
 from src.data import PackedDatasetMeta
 from src.data import PackedMemmapDataset
-
-
-def _load_qwen3_classes():
-    try:
-        from transformers import Qwen3Config  # type: ignore
-        from transformers import Qwen3ForCausalLM
-
-        return Qwen3Config, Qwen3ForCausalLM
-    except Exception as exc:  # pragma: no cover
-        raise RuntimeError("Qwen3 model classes not found. Install transformers>=4.51.0.") from exc
+from src.models.qwen3 import Qwen3Config
+from src.models.qwen3 import Qwen3ForCausalLM
 
 
 def load_tokenizer(name_or_path: str):
@@ -107,7 +99,7 @@ class SampleCallback(TrainerCallback):
             temperature=self.temperature,
             top_p=self.top_p,
             max_new_tokens=self.max_new_tokens,
-            pad_token_id=self.tokenizer.eos_token_id,
+            pad_token_id=self.tokenizer.pad_token_id,
         )
         text = self.tokenizer.decode(out[0], skip_special_tokens=True)
         print(f"\n[sample step={state.global_step}]\n{text}\n")
@@ -215,8 +207,6 @@ def main() -> None:
     eval_ds = PackedMemmapDataset(data_dir / "val.bin", meta) if (data_dir / "val.bin").exists() else None
     if eval_ds is not None and args.eval_steps is None:
         raise ValueError("Validation requires --eval_steps")
-
-    Qwen3Config, Qwen3ForCausalLM = _load_qwen3_classes()
 
     cfg_dict = json.loads(Path(args.config).read_text())
     config = Qwen3Config(**cfg_dict)

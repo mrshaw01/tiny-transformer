@@ -5,21 +5,14 @@ import argparse
 import torch
 from transformers import AutoTokenizer
 
+from src.models.qwen3 import Qwen3ForCausalLM
+
 
 def load_tokenizer(path: str):
     try:
         return AutoTokenizer.from_pretrained(path, use_fast=True, fix_mistral_regex=True)
     except TypeError:
         return AutoTokenizer.from_pretrained(path, use_fast=True)
-
-
-def _load_qwen3_model_class():
-    try:
-        from transformers import Qwen3ForCausalLM  # type: ignore
-
-        return Qwen3ForCausalLM
-    except Exception as exc:  # pragma: no cover
-        raise RuntimeError("Qwen3 model class not found. Install transformers>=4.51.0.") from exc
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,7 +36,6 @@ def main() -> None:
         tokenizer.pad_token = tokenizer.eos_token
     if tokenizer.bos_token_id is None and tokenizer.pad_token_id is not None:
         tokenizer.bos_token = tokenizer.pad_token
-    Qwen3ForCausalLM = _load_qwen3_model_class()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == "cuda":

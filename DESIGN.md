@@ -45,6 +45,11 @@ We mirror modern Qwen-family choices (what the “author does”) while keeping 
 
 Design rule: keep architecture defined by a single config file (`configs/qwen3_demo.json`) so model changes are config-only.
 
+## Code layout (current)
+
+- Model code is vendored from HuggingFace Transformers into `src/models/qwen3/` so we can modify it locally.
+- Training/sampling imports `Qwen3Config`/`Qwen3ForCausalLM` from `src.models.qwen3` (not from `transformers`).
+
 ### Concrete target config (only one)
 
 We keep the **Qwen3 tokenizer vocab** (large) but reduce hidden size / depth so the run fits <10 minutes.
@@ -144,6 +149,10 @@ tiny-transformer/
     qwen3_demo.json
   src/
     data.py
+    models/
+      qwen3/
+        configuration_qwen3.py
+        modeling_qwen3.py
     train.py
     sample.py
   scripts/

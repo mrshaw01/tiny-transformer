@@ -2,6 +2,8 @@
 
 Scratch-only, Qwen3-style decoder-only training demo that runs in **<10 minutes** on **1×A100**.
 
+Qwen3 model code is vendored into `src/models/qwen3/` so you can modify the architecture locally.
+
 ## Setup (conda)
 
 ```bash
