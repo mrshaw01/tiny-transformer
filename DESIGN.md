@@ -49,6 +49,7 @@ Design rule: keep architecture defined by a single config file (`configs/qwen3_d
 
 - Model code is vendored from HuggingFace Transformers into `src/models/qwen3/` so we can modify it locally.
 - Training/sampling imports `Qwen3Config`/`Qwen3ForCausalLM` from `src.models.qwen3` (not from `transformers`).
+- We only keep the **causal LM** path (no seq-cls / token-cls / QA heads).
 
 ### Concrete target config (only one)
 
@@ -145,6 +146,9 @@ tiny-transformer/
   DESIGN.md
   README.md
   environment.yml
+  .pre-commit-config.yaml
+  .style.yapf
+  .clang-format
   configs/
     qwen3_demo.json
   src/
@@ -164,6 +168,6 @@ tiny-transformer/
 - Prepare packed token data (Wikipedia intros):
   - `python scripts/prepare_dataset.py --out_dir data --seq_len 512 --max_bytes 100000000`
 - Train:
-  - `python -m src.train --config configs/qwen3_demo.json --data_dir data --out_dir runs --steps 3000 --bf16 --eval_steps 500 --save_steps 500 --early_stopping_patience 2 --max_train_minutes 9.5`
+  - `python -m src.train --config configs/qwen3_demo.json --data_dir data --out_dir runs --steps 5000 --bf16 --eval_steps 500 --save_steps 500 --early_stopping_patience 2 --max_train_minutes 9.5`
 - Sample:
   - `python -m src.sample --ckpt_dir runs/best --prompt "Once upon a time" --top_p 0.95 --temp 0.9`
