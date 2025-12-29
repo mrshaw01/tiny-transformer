@@ -9,6 +9,7 @@ import platform
 import time
 
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
 
 import torch
 import transformers
@@ -18,11 +19,11 @@ from transformers import Trainer
 from transformers import TrainerCallback
 from transformers import TrainingArguments
 
-from src.data import default_data_collator
-from src.data import PackedDatasetMeta
-from src.data import PackedMemmapDataset
-from src.models.qwen3 import Qwen3Config
-from src.models.qwen3 import Qwen3ForCausalLM
+from tiny_transformer.data.packed_dataset import default_data_collator
+from tiny_transformer.data.packed_dataset import PackedDatasetMeta
+from tiny_transformer.data.packed_dataset import PackedMemmapDataset
+from tiny_transformer.models.qwen3 import Qwen3Config
+from tiny_transformer.models.qwen3 import Qwen3ForCausalLM
 
 
 def load_tokenizer(name_or_path: str):
@@ -32,7 +33,7 @@ def load_tokenizer(name_or_path: str):
         return AutoTokenizer.from_pretrained(name_or_path, use_fast=True)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--config", type=str, required=True, help="Path to configs/qwen3_demo.json")
     p.add_argument("--data_dir", type=str, required=True, help="Directory containing train.bin/val.bin/meta.json")
@@ -56,7 +57,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--early_stopping_patience", type=int, default=0)
     p.add_argument("--early_stopping_threshold", type=float, default=0.0)
     p.add_argument("--max_train_minutes", type=float, default=0.0)
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 class SampleCallback(TrainerCallback):
@@ -184,8 +185,8 @@ class EvalLossEarlyStoppingCallback(TrainerCallback):
         return control
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     set_seed(args.seed)
 
     if torch.cuda.is_available():
@@ -205,8 +206,6 @@ def main() -> None:
     meta = PackedDatasetMeta.load(data_dir / "meta.json")
     train_ds = PackedMemmapDataset(data_dir / "train.bin", meta)
     eval_ds = PackedMemmapDataset(data_dir / "val.bin", meta) if (data_dir / "val.bin").exists() else None
-    if eval_ds is not None and args.eval_steps is None:
-        raise ValueError("Validation requires --eval_steps")
 
     cfg_dict = json.loads(Path(args.config).read_text())
     config = Qwen3Config(**cfg_dict)

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import os
 
 import torch
 from transformers import AutoTokenizer
 
-from src.models.qwen3 import Qwen3ForCausalLM
+from tiny_transformer.models.qwen3 import Qwen3ForCausalLM
+
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
 
 
 def load_tokenizer(path: str):
@@ -15,7 +19,7 @@ def load_tokenizer(path: str):
         return AutoTokenizer.from_pretrained(path, use_fast=True)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--ckpt_dir", type=str, required=True, help="Directory saved by training (runs/last)")
     p.add_argument("--prompt", type=str, required=True)
@@ -23,12 +27,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--temp", type=float, default=0.9)
     p.add_argument("--top_p", type=float, default=0.95)
     p.add_argument("--seed", type=int, default=1234)
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 @torch.inference_mode()
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     torch.manual_seed(args.seed)
 
     tokenizer = load_tokenizer(args.ckpt_dir)
@@ -42,8 +46,12 @@ def main() -> None:
         print(f"[device] cuda:0 name={torch.cuda.get_device_name(0)} bf16_supported={torch.cuda.is_bf16_supported()}")
     else:
         print("[device] cpu")
-    model = Qwen3ForCausalLM.from_pretrained(args.ckpt_dir, dtype=torch.bfloat16 if device.type == "cuda" else None)
-    model.to(device)
+
+    model = Qwen3ForCausalLM.from_pretrained(args.ckpt_dir)
+    if device.type == "cuda":
+        model = model.to(device=device, dtype=torch.bfloat16)
+    else:
+        model = model.to(device=device)
     model.eval()
 
     inputs = tokenizer(args.prompt, return_tensors="pt").to(device)

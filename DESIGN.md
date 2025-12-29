@@ -47,8 +47,8 @@ Design rule: keep architecture defined by a single config file (`configs/qwen3_d
 
 ## Code layout (current)
 
-- Model code is vendored from HuggingFace Transformers into `src/models/qwen3/` so we can modify it locally.
-- Training/sampling imports `Qwen3Config`/`Qwen3ForCausalLM` from `src.models.qwen3` (not from `transformers`).
+- Model code is vendored from HuggingFace Transformers into `tiny_transformer/models/qwen3/` so we can modify it locally.
+- Training/sampling imports `Qwen3Config`/`Qwen3ForCausalLM` from `tiny_transformer.models.qwen3` (not from `transformers`).
 - We only keep the **causal LM** path (no seq-cls / token-cls / QA heads).
 
 ### Concrete target config (only one)
@@ -137,9 +137,9 @@ Success criteria for this phase:
 
 - Generated samples show clear local coherence on the Wikipedia-intro subset (expected to be narrow and somewhat memorized).
 
-## Proposed repository structure
+## Repository structure (current)
 
-Keep the repo tiny, with a clear split between “data prep” and “train/sample”.
+Keep the repo tiny, with a clear split between “data prep” and “train/sample”, and a single importable Python package.
 
 ```
 tiny-transformer/
@@ -151,23 +151,40 @@ tiny-transformer/
   .clang-format
   configs/
     qwen3_demo.json
-  src/
-    data.py
-    models/
-      qwen3/
-        configuration_qwen3.py
-        modeling_qwen3.py
+  tiny_transformer/
+    __init__.py
+    cli.py
+    prepare_dataset.py
     train.py
     sample.py
-  scripts/
-    prepare_dataset.py
+    data/
+      __init__.py
+      packed_dataset.py
+    models/
+      __init__.py
+      qwen3/
+        __init__.py
+        configuration_qwen3.py
+        modeling_qwen3.py
 ```
 
-## CLI sketch (what you’ll run later)
+## CLI (what you run)
 
-- Prepare packed token data (Wikipedia intros):
-  - `python scripts/prepare_dataset.py --out_dir data --seq_len 512 --max_bytes 100000000`
-- Train:
-  - `python -m src.train --config configs/qwen3_demo.json --data_dir data --out_dir runs --steps 5000 --bf16 --eval_steps 500 --save_steps 500 --early_stopping_patience 2 --max_train_minutes 9.5`
-- Sample:
-  - `python -m src.sample --ckpt_dir runs/best --prompt "Once upon a time" --top_p 0.95 --temp 0.9`
+Prepare packed token data (Wikipedia intros):
+
+- `python -m tiny_transformer.prepare_dataset --out_dir data --seq_len 512 --max_bytes 100000000`
+
+Train:
+
+- `python -m tiny_transformer.train --config configs/qwen3_demo.json --data_dir data --out_dir runs --steps 2000 --bf16`
+- Better convergence (still <10 minutes on 1×A100): `python -m tiny_transformer.train --config configs/qwen3_demo.json --data_dir data --out_dir runs --steps 5000 --bf16 --eval_steps 500 --save_steps 500 --early_stopping_patience 2 --max_train_minutes 9.5`
+
+Sample:
+
+- `python -m tiny_transformer.sample --ckpt_dir runs/best --prompt "Once upon a time" --max_new_tokens 200`
+
+Optional single-entry CLI wrapper:
+
+- `python -m tiny_transformer.cli prepare-data ...`
+- `python -m tiny_transformer.cli train ...`
+- `python -m tiny_transformer.cli sample ...`

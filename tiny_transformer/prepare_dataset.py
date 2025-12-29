@@ -11,6 +11,7 @@ from typing import List
 
 os.environ.setdefault("USE_TORCH", "0")
 os.environ.setdefault("TRANSFORMERS_NO_ADVISORY_WARNINGS", "1")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 from datasets import load_dataset
 import numpy as np
@@ -25,13 +26,13 @@ def load_tokenizer(name_or_path: str):
         return AutoTokenizer.from_pretrained(name_or_path, use_fast=True)
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--out_dir", type=str, required=True)
     p.add_argument("--seq_len", type=int, default=512)
     p.add_argument("--max_bytes", type=int, default=100_000_000, help="Max raw text bytes to consume for training")
     p.add_argument("--val_ratio", type=float, default=0.01)
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 _WS_RE = re.compile(r"[ \t]+")
@@ -163,8 +164,8 @@ def write_packed_bin(
     return train_tokens, train_sequences, val_tokens, val_sequences, consumed_bytes
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 

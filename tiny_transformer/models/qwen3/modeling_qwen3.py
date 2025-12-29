@@ -1,4 +1,4 @@
-# NOTE: Vendored from `transformers` (Qwen3) and adjusted to live under `src/models/qwen3/`.
+# NOTE: Vendored from `transformers` (Qwen3) and adjusted to live under `tiny_transformer/models/qwen3/`.
 # This file is intentionally editable so we can maintain/modify model internals in this repo.
 # coding=utf-8
 # Copyright 2025 The Qwen team, Alibaba Group and the HuggingFace Inc. team. All rights reserved.
